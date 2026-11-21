@@ -13,6 +13,7 @@ import { PaymentStep, paymentMethods } from "@/features/checkout/components/Paym
 import { ReviewStep } from "@/features/checkout/components/ReviewStep";
 import { OrderSummarySidebar } from "@/features/checkout/components/OrderSummarySidebar";
 import { useCartStore } from "@/features/cart/store";
+import { AuthGuard } from "@/features/auth/components/AuthGuard";
 
 const steps = [
   { id: "address", label: "آدرس" },
@@ -21,7 +22,16 @@ const steps = [
   { id: "review", label: "تایید نهایی" },
 ];
 
+// تسویه حساب فقط برای کاربر لاگین‌شده است (اگر نبود، به /login می‌رود و بعد از ورود برمی‌گردد)
 export default function CheckoutPage() {
+  return (
+    <AuthGuard>
+      <CheckoutContent />
+    </AuthGuard>
+  );
+}
+
+function CheckoutContent() {
   const router = useRouter();
   const clearCart = useCartStore((s) => s.clear);
   const [currentIndex, setCurrentIndex] = useState(0);

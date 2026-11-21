@@ -4,6 +4,8 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, User, ShoppingBag } from "lucide-react";
 import { useCartStore } from "@/features/cart/store";
+import { useAuthStore } from "@/features/auth/store";
+import { useAuthReady } from "@/features/auth/hooks";
 
 const navLinks = [
   { label: "جدیدترین‌ها", href: "/products?sort=newest" },
@@ -16,6 +18,11 @@ export function Header() {
   const itemCount = useCartStore((s) =>
     s.items.reduce((sum, item) => sum + item.quantity, 0)
   );
+
+  // تا قبل از خوانده شدن localStorage فرض می‌کنیم کاربر لاگین نیست (جلوی خطای hydration)
+  const authReady = useAuthReady();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const accountHref = authReady && isAuthenticated ? "/profile" : "/login";
 
   return (
     <header className="sticky top-0 z-40 bg-cream/95 backdrop-blur border-b border-line">
@@ -42,7 +49,7 @@ export function Header() {
             <button aria-label="جستجو" className="text-ink hover:text-rosewood-dark transition-colors">
               <Search size={20} strokeWidth={1.5} />
             </button>
-            <Link href="/login" aria-label="حساب کاربری" className="text-ink hover:text-rosewood-dark transition-colors">
+            <Link href={accountHref} aria-label="حساب کاربری" className="text-ink hover:text-rosewood-dark transition-colors">
               <User size={20} strokeWidth={1.5} />
             </Link>
             <Link href="/cart" aria-label="سبد خرید" className="relative text-ink hover:text-rosewood-dark transition-colors">

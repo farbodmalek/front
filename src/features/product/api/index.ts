@@ -1,3 +1,3 @@
-// فراخوانی‌های API مربوط به محصولات
-// export * from "./getProducts";
-// export * from "./getProductBySlug";
+// فراخوانی‌های API مربوط به محصولات (سرویس اصلی فروشگاه)
+export * from "./getProducts";
+export * from "./getProductBySlug";

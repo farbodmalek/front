@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,6 +12,9 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useAuthStore } from "../store";
 import { register as registerUser } from "../api/register";
+import { getApiErrorMessage } from "@/lib/api/errors";
+import { getSafeRedirect } from "../utils";
+import { toEnglishDigits } from "@/lib/utils/digits";
 
 const registerSchema = z
   .object({
@@ -19,7 +22,8 @@ const registerSchema = z
     phone: z
       .string()
       .min(1, "شماره موبایل را وارد کنید")
-      .regex(/^09\d{9}$/, "شماره موبایل معتبر نیست"),
+      .transform(toEnglishDigits)
+      .refine((value) => /^09\d{9}$/.test(value), "شماره موبایل معتبر نیست"),
     password: z.string().min(6, "رمز عبور باید حداقل ۶ کاراکتر باشد"),
     confirmPassword: z.string().min(1, "تکرار رمز عبور را وارد کنید"),
   })
@@ -37,7 +41,8 @@ const fieldVariants = {
 
 export function RegisterForm() {
   const router = useRouter();
-  const setUser = useAuthStore((s) => s.setUser);
+  const searchParams = useSearchParams();
+  const setSession = useAuthStore((s) => s.setSession);
   const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -53,15 +58,17 @@ export function RegisterForm() {
     setServerError(null);
     setLoading(true);
     try {
-      const { user } = await registerUser({
+      const session = await registerUser({
         fullName: values.fullName,
         phone: values.phone,
         password: values.password,
       });
-      setUser(user);
-      router.push("/");
-    } catch {
-      setServerError("مشکلی در ثبت‌نام پیش آمد. دوباره تلاش کنید.");
+      setSession(session);
+
+      const redirect = getSafeRedirect(searchParams.get("redirect"));
+      router.replace(redirect ?? "/");
+    } catch (error) {
+      setServerError(getApiErrorMessage(error, "مشکلی در ثبت‌نام پیش آمد. دوباره تلاش کنید."));
     } finally {
       setLoading(false);
     }

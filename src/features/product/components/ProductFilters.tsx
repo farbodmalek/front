@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
 
-const categoryOptions = [
+export const categoryOptions = [
   { label: "لباس مجلسی", value: "lebas-majlesi" },
   { label: "لباس زیر", value: "lebas-zir" },
   { label: "جوراب", value: "jorab" },

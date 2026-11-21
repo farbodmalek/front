@@ -1,30 +1,28 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { SlidersHorizontal, X } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import {
   ProductFilters,
   useProductFiltersState,
+  categoryOptions,
 } from "@/features/product/components/ProductFilters";
+import { getProducts } from "@/features/product/api";
+import { getShopErrorMessage } from "@/lib/api/errors";
 import { SortDropdown } from "@/features/product/components/SortDropdown";
 import {
   ProductCard,
   ProductCardData,
 } from "@/features/product/components/ProductCard";
 
-// نمونه داده — بعداً از API واقعی جایگزین می‌شود
-const allProducts: (ProductCardData & { category: string })[] = [
-  { slug: "p1", title: "پیراهن مجلسی حریر", categoryName: "لباس مجلسی", category: "lebas-majlesi", basePrice: 1850000, discountPrice: 1490000 },
-  { slug: "p2", title: "جوراب ساق‌بلند نخی", categoryName: "جوراب", category: "jorab", basePrice: 120000 },
-  { slug: "p3", title: "ست لباس زیر دنتلا", categoryName: "لباس زیر", category: "lebas-zir", basePrice: 640000 },
-  { slug: "p4", title: "تونیک روزمره کتان", categoryName: "پوشاک روزمره", category: "roozmareh", basePrice: 590000 },
-  { slug: "p5", title: "پیراهن شب بلند", categoryName: "لباس مجلسی", category: "lebas-majlesi", basePrice: 2450000 },
-  { slug: "p6", title: "جوراب ورزشی سه‌تایی", categoryName: "جوراب", category: "jorab", basePrice: 150000, discountPrice: 99000 },
-  { slug: "p7", title: "سوتین بدون بند", categoryName: "لباس زیر", category: "lebas-zir", basePrice: 380000 },
-  { slug: "p8", title: "شلوار جین راسته", categoryName: "پوشاک روزمره", category: "roozmareh", basePrice: 720000 },
-];
+type ListProduct = ProductCardData & { category: string };
+
+// اسم دسته‌ی بک‌اند را به slug فیلترها تبدیل می‌کند (اگر در لیست نبود، خود اسم)
+function categoryKey(name: string): string {
+  return categoryOptions.find((o) => o.label === name)?.value ?? name;
+}
 
 export default function ProductsPage() {
   const {
@@ -35,6 +33,29 @@ export default function ProductsPage() {
     priceRange,
     setPriceRange,
   } = useProductFiltersState();
+
+  const [allProducts, setAllProducts] = useState<ListProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getProducts()
+      .then((items) => {
+        if (!cancelled) {
+          setAllProducts(items.map((p) => ({ ...p, category: categoryKey(p.categoryName) })));
+        }
+      })
+      .catch((e) => {
+        if (!cancelled) setError(getShopErrorMessage(e));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const [sort, setSort] = useState("newest");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -60,7 +81,7 @@ export default function ProductsPage() {
     }
 
     return items;
-  }, [selectedCategories, priceRange, sort]);
+  }, [allProducts, selectedCategories, priceRange, sort]);
 
   return (
     <>
@@ -101,7 +122,15 @@ export default function ProductsPage() {
           </div>
 
           {/* گرید محصولات */}
-          {filteredProducts.length > 0 ? (
+          {loading ? (
+            <div className="text-center py-24">
+              <p className="text-body text-ink-muted">در حال بارگذاری محصولات...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-24">
+              <p className="text-body text-rosewood-dark">{error}</p>
+            </div>
+          ) : filteredProducts.length > 0 ? (
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredProducts.map((product) => (
                 <ProductCard key={product.slug} product={product} />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,12 +12,16 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useAuthStore } from "../store";
 import { login } from "../api/login";
+import { getApiErrorMessage } from "@/lib/api/errors";
+import { getSafeRedirect } from "../utils";
+import { toEnglishDigits } from "@/lib/utils/digits";
 
 const loginSchema = z.object({
   phone: z
     .string()
     .min(1, "شماره موبایل را وارد کنید")
-    .regex(/^09\d{9}$/, "شماره موبایل معتبر نیست"),
+    .transform(toEnglishDigits)
+    .refine((value) => /^09\d{9}$/.test(value), "شماره موبایل معتبر نیست"),
   password: z.string().min(6, "رمز عبور باید حداقل ۶ کاراکتر باشد"),
 });
 
@@ -28,9 +32,11 @@ const fieldVariants = {
   animate: { opacity: 1, y: 0 },
 };
 
+// فقط مسیرهای داخل خود سایت (مثل /checkout) مجاز است؛ جلوی redirect به سایت دیگر را می‌گیرد
 export function LoginForm() {
   const router = useRouter();
-  const setUser = useAuthStore((s) => s.setUser);
+  const searchParams = useSearchParams();
+  const setSession = useAuthStore((s) => s.setSession);
   const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -46,11 +52,13 @@ export function LoginForm() {
     setServerError(null);
     setLoading(true);
     try {
-      const { user } = await login(values);
-      setUser(user);
-      router.push("/");
-    } catch {
-      setServerError("شماره موبایل یا رمز عبور اشتباه است");
+      const session = await login(values);
+      setSession(session);
+
+      const redirect = getSafeRedirect(searchParams.get("redirect"));
+      router.replace(redirect ?? (session.user.isAdmin ? "/admin" : "/"));
+    } catch (error) {
+      setServerError(getApiErrorMessage(error, "ورود انجام نشد. دوباره تلاش کنید."));
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Heart } from "lucide-react";
 import { Header } from "@/components/layout/Header";
@@ -16,40 +16,56 @@ import { Product } from "@/features/product/types";
 import { getFinalPrice } from "@/features/product/utils";
 import { formatPrice } from "@/lib/utils/format";
 import { useCartStore } from "@/features/cart/store";
-
-// نمونه داده — بعداً با فراخوانی API واقعی بر اساس params.slug جایگزین می‌شود
-function getMockProduct(slug: string): Product {
-  return {
-    id: "1",
-    title: "پیراهن مجلسی حریر",
-    slug,
-    description:
-      "پیراهن مجلسی از پارچه حریر درجه‌یک، مناسب مهمانی و مراسم شب. دارای آستر داخلی و دوخت دست‌دوز روی یقه.",
-    category: { id: "c1", name: "لباس مجلسی", slug: "lebas-majlesi" },
-    basePrice: 1850000,
-    discountPrice: 1490000,
-    images: ["1", "2", "3", "4"],
-    variants: [
-      { id: "v1", attributes: [{ name: "سایز", value: "36" }, { name: "رنگ", value: "مشکی" }], stock: 5 },
-      { id: "v2", attributes: [{ name: "سایز", value: "38" }, { name: "رنگ", value: "مشکی" }], stock: 0 },
-      { id: "v3", attributes: [{ name: "سایز", value: "40" }, { name: "رنگ", value: "مشکی" }], stock: 3 },
-      { id: "v4", attributes: [{ name: "سایز", value: "36" }, { name: "رنگ", value: "بردو" }], stock: 2 },
-      { id: "v5", attributes: [{ name: "سایز", value: "38" }, { name: "رنگ", value: "بردو" }], stock: 4 },
-    ],
-  };
-}
+import { getProductBySlug } from "@/features/product/api";
+import { getShopErrorMessage } from "@/lib/api/errors";
 
 export default function ProductDetailPage({
   params,
 }: {
   params: { slug: string };
 }) {
-  const product = useMemo(() => getMockProduct(params.slug), [params.slug]);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    getProductBySlug(params.slug)
+      .then((p) => {
+        if (!cancelled) setProduct(p);
+      })
+      .catch((e) => {
+        if (!cancelled) setError(getShopErrorMessage(e));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [params.slug]);
+
   const addItem = useCartStore((s) => s.addItem);
 
   const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>({});
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+
+  if (loading || error || !product) {
+    return (
+      <>
+        <Header />
+        <main className="mx-auto max-w-6xl px-6 py-24 text-center">
+          <p className={error ? "text-body text-rosewood-dark" : "text-body text-ink-muted"}>
+            {loading ? "در حال بارگذاری محصول..." : error ?? "محصولی با این آدرس پیدا نشد."}
+          </p>
+        </main>
+        <Footer />
+      </>
+    );
+  }
 
   const matchedVariant = findMatchingVariant(product.variants, selectedAttributes);
   const allAttributesSelected =
@@ -66,12 +82,12 @@ export default function ProductDetailPage({
   }
 
   function handleAddToCart() {
-    if (!matchedVariant) return;
+    if (!matchedVariant || !product) return;
     addItem({
       variantId: matchedVariant.id,
       productId: product.id,
       title: product.title,
-      image: product.images[0],
+      image: product.images[0] ?? "",
       price: matchedVariant.priceOverride ?? finalPrice,
       quantity,
       attributes: matchedVariant.attributes,

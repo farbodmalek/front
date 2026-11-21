@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { LoginForm } from "@/features/auth/components/LoginForm";
 
 export default function LoginPage() {
@@ -10,7 +11,10 @@ export default function LoginPage() {
           برای ادامه خرید وارد حساب کاربری‌تان شوید
         </p>
       </div>
-      <LoginForm />
+      {/* useSearchParams داخل فرم استفاده شده و در Next.js باید داخل Suspense باشد */}
+      <Suspense fallback={null}>
+        <LoginForm />
+      </Suspense>
     </div>
   );
 }

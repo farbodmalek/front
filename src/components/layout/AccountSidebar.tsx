@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Package, MapPin, Heart, User, LogOut } from "lucide-react";
+import { Package, MapPin, Heart, User, LogOut, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useAuthStore } from "@/features/auth/store";
+import { logoutUser } from "@/features/auth/api/logout";
 import { useRouter } from "next/navigation";
 
 const navItems = [
@@ -17,12 +18,11 @@ const navItems = [
 export function AccountSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const logout = useAuthStore((s) => s.logout);
   const user = useAuthStore((s) => s.user);
 
-  function handleLogout() {
-    logout();
-    router.push("/login");
+  async function handleLogout() {
+    await logoutUser();
+    router.replace("/login");
   }
 
   return (
@@ -52,6 +52,16 @@ export function AccountSidebar() {
             </Link>
           );
         })}
+
+        {user?.isAdmin && (
+          <Link
+            href="/admin"
+            className="flex items-center gap-3 px-4 py-3 text-body text-ink-muted hover:text-ink hover:bg-line/10 transition-colors border-r-2 border-transparent"
+          >
+            <LayoutDashboard size={18} strokeWidth={1.5} />
+            پنل مدیریت
+          </Link>
+        )}
 
         <button
           onClick={handleLogout}

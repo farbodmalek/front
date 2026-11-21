@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Header } from "@/components/layout/Header";
@@ -7,6 +8,7 @@ import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/Button";
 import { SectionDivider } from "@/components/ui/SectionDivider";
 import { ProductCard, ProductCardData } from "@/features/product/components/ProductCard";
+import { getFeaturedProducts } from "@/features/product/api";
 
 const categories = [
   { name: "لباس مجلسی", slug: "lebas-majlesi" },
@@ -15,12 +17,6 @@ const categories = [
   { name: "پوشاک روزمره", slug: "roozmareh" },
 ];
 
-const featuredProducts: ProductCardData[] = [
-  { slug: "p1", title: "پیراهن مجلسی حریر", categoryName: "لباس مجلسی", basePrice: 1850000, discountPrice: 1490000 },
-  { slug: "p2", title: "جوراب ساق‌بلند نخی", categoryName: "جوراب", basePrice: 120000 },
-  { slug: "p3", title: "ست لباس زیر دنتلا", categoryName: "لباس زیر", basePrice: 640000 },
-  { slug: "p4", title: "تونیک روزمره کتان", categoryName: "پوشاک روزمره", basePrice: 590000 },
-];
 
 const containerStagger = {
   animate: { transition: { staggerChildren: 0.08 } },
@@ -32,6 +28,22 @@ const fadeUp = {
 };
 
 export default function HomePage() {
+  const [featuredProducts, setFeaturedProducts] = useState<ProductCardData[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getFeaturedProducts()
+      .then((items) => {
+        if (!cancelled) setFeaturedProducts(items);
+      })
+      .catch(() => {
+        // اگر سرویس محصولات خاموش بود، بخش «ویژه» خالی می‌ماند و بقیه‌ی صفحه سالم است
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <>
       <Header />

@@ -1,21 +1,17 @@
-import { apiClient } from "@/lib/api/client";
+import { authClient } from "@/lib/api/authClient";
 import { ENDPOINTS } from "@/lib/api/endpoints";
-import { User, AuthTokens } from "../types";
+import { AuthResponse } from "../types";
 
 export interface LoginPayload {
   phone: string;
   password: string;
 }
 
-export interface LoginResponse {
-  user: User;
-  tokens: AuthTokens;
-}
-
-export async function login(payload: LoginPayload): Promise<LoginResponse> {
-  const { data } = await apiClient.post<LoginResponse>(
-    ENDPOINTS.auth.login,
-    payload
-  );
+export async function login(payload: LoginPayload): Promise<AuthResponse> {
+  // سرویس Auth اسم فیلد را phoneNumber می‌خواهد
+  const { data } = await authClient.post<AuthResponse>(ENDPOINTS.auth.login, {
+    phoneNumber: payload.phone,
+    password: payload.password,
+  });
   return data;
 }

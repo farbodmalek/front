@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { RegisterForm } from "@/features/auth/components/RegisterForm";
 
 export default function RegisterPage() {
@@ -8,7 +9,9 @@ export default function RegisterPage() {
       <p className="text-body text-ink-muted mb-10">
         در چند مرحله ساده عضو خانواده ما شوید
       </p>
-      <RegisterForm />
+      <Suspense fallback={null}>
+        <RegisterForm />
+      </Suspense>
     </div>
   );
 }

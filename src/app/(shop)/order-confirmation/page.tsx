@@ -35,8 +35,10 @@ export default function OrderConfirmationPage() {
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: 1 }}
+              pathLength={1}
+              strokeDasharray={1}
+              initial={{ strokeDashoffset: 1 }}
+              animate={{ strokeDashoffset: 0 }}
               transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
             />
           </svg>

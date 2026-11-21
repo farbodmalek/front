@@ -55,7 +55,7 @@ export default function ProfilePage() {
           defaultValue={user?.fullName}
         />
         <Input id="profile-phone" label="شماره موبایل" defaultValue={user?.phone} disabled />
-        <Input id="profile-email" label="ایمیل (اختیاری)" type="email" defaultValue={user?.email} />
+        <Input id="profile-email" label="ایمیل (اختیاری)" type="email" defaultValue={user?.email ?? ""} />
 
         <div className="flex items-center gap-4">
           <Button type="submit" size="lg">ذخیره تغییرات</Button>
