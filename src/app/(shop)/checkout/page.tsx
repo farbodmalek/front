@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Header } from "@/components/layout/Header";
@@ -14,6 +14,9 @@ import { ReviewStep } from "@/features/checkout/components/ReviewStep";
 import { OrderSummarySidebar } from "@/features/checkout/components/OrderSummarySidebar";
 import { useCartStore } from "@/features/cart/store";
 import { AuthGuard } from "@/features/auth/components/AuthGuard";
+import { Address, AddressInput, addressSummary, createAddress, getAddresses } from "@/features/address/api";
+import { placeOrder } from "@/features/order/api";
+import { getShopErrorMessage } from "@/lib/api/errors";
 
 const steps = [
   { id: "address", label: "آدرس" },
@@ -33,14 +36,47 @@ export default function CheckoutPage() {
 
 function CheckoutContent() {
   const router = useRouter();
-  const clearCart = useCartStore((s) => s.clear);
+  const clearLocalCart = useCartStore((s) => s.clearLocal);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [addressId, setAddressId] = useState<string | null>("addr1");
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [addressesLoading, setAddressesLoading] = useState(true);
+  const [addressesError, setAddressesError] = useState<string | null>(null);
+  const [addressId, setAddressId] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [shippingId, setShippingId] = useState<string | null>("standard");
   const [paymentId, setPaymentId] = useState<string | null>("online");
   const [direction, setDirection] = useState(1);
 
   const selectedShipping = shippingMethods.find((m) => m.id === shippingId);
+  const selectedAddress = addresses.find((a) => a.id === addressId);
+
+  // سبد را از سرور تازه کن (قیمت و موجودی واقعی) و آدرس‌ها را بگیر
+  useEffect(() => {
+    void useCartStore.getState().refresh();
+
+    getAddresses()
+      .then((list) => {
+        setAddresses(list);
+        const preferred = list.find((a) => a.isDefault) ?? list[0];
+        setAddressId(preferred ? preferred.id : null);
+      })
+      .catch((e) => setAddressesError(getShopErrorMessage(e)))
+      .finally(() => setAddressesLoading(false));
+  }, []);
+
+  async function handleCreateAddress(input: AddressInput): Promise<string | null> {
+    try {
+      const before = new Set(addresses.map((a) => a.id));
+      const list = await createAddress(input);
+      setAddresses(list);
+      const created = list.find((a) => !before.has(a.id));
+      if (created) setAddressId(created.id);
+      return null;
+    } catch (e) {
+      return getShopErrorMessage(e);
+    }
+  }
 
   function goNext() {
     setDirection(1);
@@ -52,10 +88,23 @@ function CheckoutContent() {
     setCurrentIndex((i) => Math.max(0, i - 1));
   }
 
-  function handleFinalSubmit() {
-    // TODO: اتصال به API نهایی ثبت سفارش
-    clearCart();
-    router.push("/order-confirmation");
+  async function handleFinalSubmit() {
+    if (!addressId || !shippingId || !paymentId) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const orderNumber = await placeOrder({
+        addressId,
+        shippingMethod: shippingId,
+        paymentMethod: paymentId,
+      });
+      clearLocalCart(); // سرور سبد را خالی کرده؛ سبد مرورگر هم خالی شود
+      router.push(`/order-confirmation?order=${encodeURIComponent(orderNumber)}`);
+    } catch (e) {
+      setSubmitError(getShopErrorMessage(e));
+      setSubmitting(false);
+      void useCartStore.getState().refresh();
+    }
   }
 
   const canProceed =
@@ -85,7 +134,14 @@ function CheckoutContent() {
                 transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
               >
                 {currentIndex === 0 && (
-                  <AddressStep selectedAddressId={addressId} onSelectAddress={setAddressId} />
+                  <AddressStep
+                    addresses={addresses}
+                    loading={addressesLoading}
+                    loadError={addressesError}
+                    selectedAddressId={addressId}
+                    onSelectAddress={setAddressId}
+                    onCreate={handleCreateAddress}
+                  />
                 )}
                 {currentIndex === 1 && (
                   <ShippingStep selectedMethodId={shippingId} onSelectMethod={setShippingId} />
@@ -95,13 +151,17 @@ function CheckoutContent() {
                 )}
                 {currentIndex === 3 && (
                   <ReviewStep
-                    addressLabel={addressId === "addr1" ? "منزل — تهران، ونک" : "محل کار — تهران، سعادت‌آباد"}
+                    addressLabel={
+                      selectedAddress ? `${selectedAddress.title} — ${addressSummary(selectedAddress)}` : "-"
+                    }
                     shippingLabel={selectedShipping?.title ?? "-"}
                     paymentLabel={paymentId === "online" ? "پرداخت آنلاین" : "پرداخت در محل"}
                   />
                 )}
               </motion.div>
             </AnimatePresence>
+
+            {submitError && <p className="text-body text-rosewood-dark mt-8">{submitError}</p>}
 
             <div className="flex items-center gap-4 mt-12">
               {currentIndex > 0 && (
@@ -114,8 +174,8 @@ function CheckoutContent() {
                   ادامه
                 </Button>
               ) : (
-                <Button size="lg" onClick={handleFinalSubmit} className="flex-1">
-                  پرداخت و ثبت نهایی سفارش
+                <Button size="lg" onClick={handleFinalSubmit} disabled={submitting} className="flex-1">
+                  {submitting ? "در حال ثبت سفارش..." : "پرداخت و ثبت نهایی سفارش"}
                 </Button>
               )}
             </div>

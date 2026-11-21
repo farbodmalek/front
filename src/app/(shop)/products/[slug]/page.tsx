@@ -15,7 +15,9 @@ import {
 import { Product } from "@/features/product/types";
 import { getFinalPrice } from "@/features/product/utils";
 import { formatPrice } from "@/lib/utils/format";
+import { useRouter } from "next/navigation";
 import { useCartStore } from "@/features/cart/store";
+import { useWishlistStore } from "@/features/wishlist/store";
 import { getProductBySlug } from "@/features/product/api";
 import { getShopErrorMessage } from "@/lib/api/errors";
 
@@ -27,6 +29,7 @@ export default function ProductDetailPage({
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,6 +51,9 @@ export default function ProductDetailPage({
   }, [params.slug]);
 
   const addItem = useCartStore((s) => s.addItem);
+  const router = useRouter();
+  const inWishlist = useWishlistStore((st) => (product ? st.ids.includes(product.id) : false));
+  const toggleWishlist = useWishlistStore((st) => st.toggle);
 
   const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>({});
   const [quantity, setQuantity] = useState(1);
@@ -81,9 +87,17 @@ export default function ProductDetailPage({
     setAdded(false);
   }
 
-  function handleAddToCart() {
+
+  async function handleWishlist() {
+    if (!product) return;
+    const result = await toggleWishlist(product.id);
+    if (result === null) router.push(`/login?redirect=/products/${product.slug}`);
+  }
+
+  async function handleAddToCart() {
     if (!matchedVariant || !product) return;
-    addItem({
+    setAddError(null);
+    const error = await addItem({
       variantId: matchedVariant.id,
       productId: product.id,
       title: product.title,
@@ -91,7 +105,13 @@ export default function ProductDetailPage({
       price: matchedVariant.priceOverride ?? finalPrice,
       quantity,
       attributes: matchedVariant.attributes,
+      stock: matchedVariant.stock,
     });
+    if (error) {
+      setAddError(error);
+      setAdded(false);
+      return;
+    }
     setAdded(true);
   }
 
@@ -112,7 +132,7 @@ export default function ProductDetailPage({
         </nav>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
-          <ProductGallery imageCount={product.images.length} />
+          <ProductGallery images={product.images} />
 
           <div>
             <p className="text-small text-ink-muted mb-2">{product.category.name}</p>
@@ -166,12 +186,18 @@ export default function ProductDetailPage({
                 {added ? "به سبد اضافه شد" : "افزودن به سبد خرید"}
               </Button>
               <button
-                aria-label="افزودن به علاقه‌مندی‌ها"
+                onClick={handleWishlist}
+                aria-label={inWishlist ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"}
                 className="w-12 h-12 flex items-center justify-center border border-line text-ink-muted hover:text-rosewood-dark hover:border-rosewood transition-colors"
               >
-                <Heart size={18} strokeWidth={1.5} />
+                <Heart
+                  size={18}
+                  strokeWidth={1.5}
+                  className={inWishlist ? "fill-rosewood-dark text-rosewood-dark" : undefined}
+                />
               </button>
             </div>
+            {addError && <p className="text-small text-rosewood-dark mb-4">{addError}</p>}
           </div>
         </div>
       </main>

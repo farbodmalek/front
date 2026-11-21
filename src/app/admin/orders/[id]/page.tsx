@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { formatPrice } from "@/lib/utils/format";
-
-type OrderStatus = "processing" | "shipped" | "delivered" | "cancelled";
+import { formatDate, formatPrice } from "@/lib/utils/format";
+import { OrderDetail, OrderStatus } from "@/features/order/api";
+import { getAdminOrder, updateOrderStatus } from "@/features/admin/api";
+import { getShopErrorMessage } from "@/lib/api/errors";
 
 const statusOptions: { value: OrderStatus; label: string }[] = [
   { value: "processing", label: "در حال پردازش" },
@@ -16,84 +17,126 @@ const statusOptions: { value: OrderStatus; label: string }[] = [
   { value: "cancelled", label: "لغو شده" },
 ];
 
-const mockOrder = {
-  customer: { name: "سارا احمدی", phone: "۰۹۱۲۳۴۵۶۷۸۹" },
-  address: "تهران، ونک، خیابان ولیعصر، پلاک ۱۲، واحد ۳",
-  shippingMethod: "پست پیشتاز",
-  paymentMethod: "پرداخت آنلاین",
-  items: [
-    { title: "پیراهن مجلسی حریر", variant: "سایز ۳۸ / مشکی", quantity: 1, price: 1490000 },
-    { title: "جوراب ساق‌بلند نخی", variant: "یک‌سایز", quantity: 2, price: 120000 },
-  ],
-  shippingCost: 45000,
-};
-
 export default function AdminOrderDetailPage({ params }: { params: { id: string } }) {
+  const orderNumber = decodeURIComponent(params.id);
+  const [order, setOrder] = useState<OrderDetail | null>(null);
   const [status, setStatus] = useState<OrderStatus>("processing");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const subtotal = mockOrder.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const total = subtotal + mockOrder.shippingCost;
+  async function load() {
+    try {
+      const result = await getAdminOrder(orderNumber);
+      setOrder(result);
+      setStatus(result.status);
+    } catch (e) {
+      setError(getShopErrorMessage(e));
+    } finally {
+      setLoading(false);
+    }
+  }
 
-  function handleSaveStatus() {
-    // TODO: اتصال به PATCH /api/orders/{id}/status
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  useEffect(() => {
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderNumber]);
+
+  async function handleSaveStatus() {
+    setSaving(true);
+    setError(null);
+    try {
+      await updateOrderStatus(orderNumber, status);
+      await load();
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (e) {
+      setError(getShopErrorMessage(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const back = (
+    <Link
+      href="/admin/orders"
+      className="inline-flex items-center gap-1 text-small text-ink-muted hover:text-ink mb-8 transition-colors"
+    >
+      <ChevronRight size={16} strokeWidth={1.5} />
+      بازگشت به سفارش‌ها
+    </Link>
+  );
+
+  if (loading || !order) {
+    return (
+      <div>
+        {back}
+        <p className={error ? "text-body text-rosewood-dark" : "text-body text-ink-muted"}>
+          {loading ? "در حال بارگذاری..." : error ?? "سفارش پیدا نشد."}
+        </p>
+      </div>
+    );
   }
 
   return (
     <div>
-      <Link
-        href="/admin/orders"
-        className="inline-flex items-center gap-1 text-small text-ink-muted hover:text-ink mb-8 transition-colors"
-      >
-        <ChevronRight size={16} strokeWidth={1.5} />
-        بازگشت به سفارش‌ها
-      </Link>
+      {back}
 
       <div className="flex items-center justify-between mb-10">
         <div>
-          <h1 className="text-h1 font-light text-ink">{params.id}</h1>
+          <h1 className="text-h1 font-light text-ink">{order.orderNumber}</h1>
           <p className="text-small text-ink-muted mt-1">
-            مشتری: {mockOrder.customer.name} · {mockOrder.customer.phone}
+            مشتری: {order.customerName ?? "-"} · {order.customerPhone ?? "-"} · {formatDate(order.createdAt)}
           </p>
         </div>
-        <Badge variant={status} />
+        <Badge variant={order.status} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-12">
         <div>
           <h2 className="text-body text-ink mb-4">اقلام سفارش</h2>
           <div className="flex flex-col gap-4 mb-10">
-            {mockOrder.items.map((item, i) => (
+            {order.items.map((item, i) => (
               <div key={i} className="flex gap-4 border-b border-line pb-4">
-                <div className="w-16 h-20 bg-line/40 flex items-center justify-center flex-shrink-0 text-small text-ink-muted">
-                  تصویر
+                <div className="w-16 h-20 bg-line/40 flex items-center justify-center flex-shrink-0 text-small text-ink-muted overflow-hidden">
+                  {item.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={item.imageUrl} alt={item.productName} className="w-full h-full object-cover" />
+                  ) : (
+                    "تصویر"
+                  )}
                 </div>
                 <div className="flex-1">
-                  <p className="text-body text-ink">{item.title}</p>
+                  <p className="text-body text-ink">{item.productName}</p>
                   <p className="text-small text-ink-muted mt-1">
-                    {item.variant} × {item.quantity}
+                    {item.variantDescription ? `${item.variantDescription} × ` : "× "}
+                    {item.quantity.toLocaleString("fa-IR")}
+                    {item.sku ? ` · ${item.sku}` : ""}
                   </p>
                 </div>
-                <span className="text-body text-ink">{formatPrice(item.price * item.quantity)}</span>
+                <span className="text-body text-ink">{formatPrice(item.unitPrice * item.quantity)}</span>
               </div>
             ))}
           </div>
 
           <h2 className="text-body text-ink mb-4">اطلاعات ارسال</h2>
           <div className="flex flex-col gap-3 text-body">
-            <div className="flex justify-between">
+            <div className="flex justify-between gap-6">
+              <span className="text-ink-muted">گیرنده</span>
+              <span className="text-ink">{order.recipientName} · {order.recipientPhone}</span>
+            </div>
+            <div className="flex justify-between gap-6">
               <span className="text-ink-muted">آدرس تحویل</span>
-              <span className="text-ink">{mockOrder.address}</span>
+              <span className="text-ink text-left">{order.shippingAddress}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between gap-6">
               <span className="text-ink-muted">روش ارسال</span>
-              <span className="text-ink">{mockOrder.shippingMethod}</span>
+              <span className="text-ink">{order.shippingMethodTitle}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between gap-6">
               <span className="text-ink-muted">روش پرداخت</span>
-              <span className="text-ink">{mockOrder.paymentMethod}</span>
+              <span className="text-ink">{order.paymentMethodTitle}</span>
             </div>
           </div>
         </div>
@@ -104,16 +147,16 @@ export default function AdminOrderDetailPage({ params }: { params: { id: string 
             <div className="flex flex-col gap-3 mb-4">
               <div className="flex justify-between text-body">
                 <span className="text-ink-muted">جمع کالاها</span>
-                <span className="text-ink">{formatPrice(subtotal)}</span>
+                <span className="text-ink">{formatPrice(order.subtotal)}</span>
               </div>
               <div className="flex justify-between text-body">
                 <span className="text-ink-muted">هزینه ارسال</span>
-                <span className="text-ink">{formatPrice(mockOrder.shippingCost)}</span>
+                <span className="text-ink">{formatPrice(order.shippingCost)}</span>
               </div>
             </div>
             <div className="flex justify-between text-body border-t border-line pt-4">
               <span className="text-ink">مجموع</span>
-              <span className="text-ink">{formatPrice(total)}</span>
+              <span className="text-ink">{formatPrice(order.total)}</span>
             </div>
           </div>
 
@@ -130,12 +173,14 @@ export default function AdminOrderDetailPage({ params }: { params: { id: string 
                 </option>
               ))}
             </select>
-            <div className="flex items-center gap-3">
-              <Button size="md" onClick={handleSaveStatus} className="w-full">
-                ذخیره وضعیت
-              </Button>
-            </div>
+            <Button size="md" onClick={handleSaveStatus} disabled={saving || status === order.status} className="w-full">
+              {saving ? "در حال ذخیره..." : "ذخیره وضعیت"}
+            </Button>
             {saved && <p className="text-small text-sage mt-3">وضعیت ذخیره شد</p>}
+            {error && <p className="text-small text-rosewood-dark mt-3">{error}</p>}
+            {(order.status === "delivered" || order.status === "cancelled") && (
+              <p className="text-small text-ink-muted mt-3">این سفارش به پایان رسیده و دیگر تغییر نمی‌کند.</p>
+            )}
           </div>
         </div>
       </div>

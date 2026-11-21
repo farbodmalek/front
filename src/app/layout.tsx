@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Vazirmatn } from "next/font/google";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { QuickViewModal } from "@/features/product/components/QuickViewModal";
+import { CartSync } from "@/features/cart/components/CartSync";
 import "./globals.css";
 
 const vazirmatn = Vazirmatn({
@@ -25,6 +26,7 @@ export default function RootLayout({
       <body className="bg-cream text-ink font-sans antialiased">
         <PageTransition>{children}</PageTransition>
         <QuickViewModal />
+        <CartSync />
       </body>
     </html>
   );

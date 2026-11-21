@@ -43,8 +43,13 @@ export default function CartPage() {
                     className="overflow-hidden"
                   >
                     <div className="flex gap-5 py-6 border-b border-line">
-                      <div className="w-24 h-32 bg-line/40 flex items-center justify-center flex-shrink-0">
-                        <span className="text-ink-muted text-small">تصویر</span>
+                      <div className="w-24 h-32 bg-line/40 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {item.image ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-ink-muted text-small">تصویر</span>
+                        )}
                       </div>
 
                       <div className="flex-1 flex flex-col justify-between">
@@ -68,6 +73,7 @@ export default function CartPage() {
                           <QuantitySelector
                             value={item.quantity}
                             onChange={(q) => updateQuantity(item.variantId, q)}
+                            max={item.stock}
                           />
                           <span className="text-body text-ink">
                             {formatPrice(item.price * item.quantity)}

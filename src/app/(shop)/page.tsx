@@ -9,13 +9,8 @@ import { Button } from "@/components/ui/Button";
 import { SectionDivider } from "@/components/ui/SectionDivider";
 import { ProductCard, ProductCardData } from "@/features/product/components/ProductCard";
 import { getFeaturedProducts } from "@/features/product/api";
+import { getCategories, Category } from "@/features/category/api";
 
-const categories = [
-  { name: "لباس مجلسی", slug: "lebas-majlesi" },
-  { name: "لباس زیر", slug: "lebas-zir" },
-  { name: "جوراب", slug: "jorab" },
-  { name: "پوشاک روزمره", slug: "roozmareh" },
-];
 
 
 const containerStagger = {
@@ -29,6 +24,13 @@ const fadeUp = {
 
 export default function HomePage() {
   const [featuredProducts, setFeaturedProducts] = useState<ProductCardData[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    getCategories()
+      .then(setCategories)
+      .catch(() => setCategories([]));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;

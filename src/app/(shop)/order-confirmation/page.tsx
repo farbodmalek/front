@@ -1,21 +1,23 @@
 "use client";
 
-import { useMemo } from "react";
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/Button";
 
-function useOrderNumber() {
-  return useMemo(() => {
-    const random = Math.floor(100000 + Math.random() * 900000);
-    return `AV-${random}`;
-  }, []);
+export default function OrderConfirmationPage() {
+  return (
+    <Suspense fallback={null}>
+      <OrderConfirmationContent />
+    </Suspense>
+  );
 }
 
-export default function OrderConfirmationPage() {
-  const orderNumber = useOrderNumber();
+function OrderConfirmationContent() {
+  const orderNumber = useSearchParams().get("order") ?? "-";
 
   return (
     <>

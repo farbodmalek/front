@@ -3,16 +3,10 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
 
-export const categoryOptions = [
-  { label: "لباس مجلسی", value: "lebas-majlesi" },
-  { label: "لباس زیر", value: "lebas-zir" },
-  { label: "جوراب", value: "jorab" },
-  { label: "پوشاک روزمره", value: "roozmareh" },
-];
-
 const sizeOptions = ["36", "38", "40", "42", "44"];
 
 interface ProductFiltersProps {
+  categories: { label: string; value: string }[];
   selectedCategories: string[];
   onCategoryChange: (value: string) => void;
   selectedSizes: string[];
@@ -22,6 +16,7 @@ interface ProductFiltersProps {
 }
 
 export function ProductFilters({
+  categories,
   selectedCategories,
   onCategoryChange,
   selectedSizes,
@@ -35,7 +30,7 @@ export function ProductFilters({
       <div>
         <h3 className="text-body text-ink mb-4">دسته‌بندی</h3>
         <div className="flex flex-col gap-3">
-          {categoryOptions.map((opt) => (
+          {categories.map((opt) => (
             <label
               key={opt.value}
               className="flex items-center gap-3 cursor-pointer group"

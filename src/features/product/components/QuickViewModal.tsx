@@ -8,10 +8,10 @@ import { useQuickViewStore } from "../store/quickView";
 import { Button } from "@/components/ui/Button";
 import { QuantitySelector } from "@/components/ui/QuantitySelector";
 import { useCartStore } from "@/features/cart/store";
+import { getProductBySlug } from "../api";
+import { Product } from "../types";
 import { formatPrice } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
-
-const demoSizes = ["36", "38", "40", "42"];
 
 export function QuickViewModal() {
   const { product, isOpen, close } = useQuickViewStore();
@@ -19,6 +19,41 @@ export function QuickViewModal() {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+  const [detail, setDetail] = useState<Product | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);
+
+  // واریانت‌های واقعی محصول را از سرور می‌گیریم
+  useEffect(() => {
+    if (!isOpen || !product) return;
+    let cancelled = false;
+    setDetail(null);
+    getProductBySlug(product.slug)
+      .then((p) => {
+        if (!cancelled) setDetail(p);
+      })
+      .catch(() => {
+        if (!cancelled) setDetail(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, product]);
+
+  // سایزها: از واریانت‌ها (سایز ناموجود خاکستری می‌شود)
+  const sizes = detail
+    ? Array.from(
+        new Set(
+          detail.variants
+            .map((v) => v.attributes.find((a) => a.name === "سایز")?.value)
+            .filter((v): v is string => !!v)
+        )
+      ).map((size) => ({
+        size,
+        inStock: detail.variants.some(
+          (v) => v.stock > 0 && v.attributes.some((a) => a.name === "سایز" && a.value === size)
+        ),
+      }))
+    : [];
 
   // ریست وضعیت هر بار که محصول جدیدی باز می‌شود
   useEffect(() => {
@@ -26,6 +61,7 @@ export function QuickViewModal() {
       setSelectedSize(null);
       setQuantity(1);
       setAdded(false);
+      setAddError(null);
     }
   }, [isOpen, product?.slug]);
 
@@ -38,17 +74,29 @@ export function QuickViewModal() {
     return () => document.removeEventListener("keydown", handleKey);
   }, [close]);
 
-  function handleAddToCart() {
-    if (!product || !selectedSize) return;
-    addItem({
-      variantId: `${product.slug}-${selectedSize}`,
-      productId: product.slug,
-      title: product.title,
-      image: "",
-      price: product.discountPrice ?? product.basePrice,
+  async function handleAddToCart() {
+    if (!detail || !selectedSize) return;
+    const variant = detail.variants.find(
+      (v) => v.stock > 0 && v.attributes.some((a) => a.name === "سایز" && a.value === selectedSize)
+    );
+    if (!variant) return;
+
+    setAddError(null);
+    const error = await addItem({
+      variantId: variant.id,
+      productId: detail.id,
+      title: detail.title,
+      image: detail.images[0] ?? "",
+      price: variant.priceOverride ?? detail.discountPrice ?? detail.basePrice,
       quantity,
-      attributes: [{ name: "سایز", value: selectedSize }],
+      attributes: variant.attributes,
+      stock: variant.stock,
     });
+    if (error) {
+      setAddError(error);
+      setAdded(false);
+      return;
+    }
     setAdded(true);
   }
 
@@ -84,8 +132,13 @@ export function QuickViewModal() {
               <X size={18} strokeWidth={1.5} />
             </button>
 
-            <div className="aspect-square md:aspect-auto bg-line/40 flex items-center justify-center">
-              <span className="text-ink-muted text-small">تصویر محصول</span>
+            <div className="aspect-square md:aspect-auto bg-line/40 flex items-center justify-center overflow-hidden">
+              {product.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={product.imageUrl} alt={product.title} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-ink-muted text-small">تصویر محصول</span>
+              )}
             </div>
 
             <div className="p-8 flex flex-col">
@@ -110,15 +163,18 @@ export function QuickViewModal() {
               <div className="mb-8">
                 <h3 className="text-body text-ink mb-3">سایز</h3>
                 <div className="flex flex-wrap gap-2">
-                  {demoSizes.map((size) => (
+                  {!detail && <span className="text-small text-ink-muted">در حال بارگذاری...</span>}
+                  {sizes.map(({ size, inStock }) => (
                     <button
                       key={size}
+                      disabled={!inStock}
                       onClick={() => {
                         setSelectedSize(size);
                         setAdded(false);
                       }}
                       className={cn(
                         "w-11 h-11 border text-small transition-colors",
+                        !inStock && "opacity-40 line-through cursor-not-allowed",
                         selectedSize === size
                           ? "bg-ink text-cream border-ink"
                           : "border-line text-ink-muted hover:border-ink hover:text-ink"
@@ -141,6 +197,8 @@ export function QuickViewModal() {
                   {added ? "به سبد اضافه شد" : "افزودن به سبد خرید"}
                 </Button>
               </div>
+
+              {addError && <p className="text-small text-rosewood-dark mb-4">{addError}</p>}
 
               <Link
                 href={`/products/${product.slug}`}

@@ -2,11 +2,16 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Eye } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Eye, Heart } from "lucide-react";
+import { useWishlistStore } from "@/features/wishlist/store";
+import { cn } from "@/lib/utils/cn";
 import { formatPrice } from "@/lib/utils/format";
 import { useQuickViewStore } from "../store/quickView";
 
 export interface ProductCardData {
+  id?: string;
+  imageUrl?: string;
   slug: string;
   title: string;
   categoryName: string;
@@ -17,6 +22,17 @@ export interface ProductCardData {
 export function ProductCard({ product }: { product: ProductCardData }) {
   const hasDiscount = !!product.discountPrice;
   const openQuickView = useQuickViewStore((s) => s.open);
+  const router = useRouter();
+  const inWishlist = useWishlistStore((s) => (product.id ? s.ids.includes(product.id) : false));
+  const toggleWishlist = useWishlistStore((s) => s.toggle);
+
+  async function handleWishlist(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!product.id) return;
+    const result = await toggleWishlist(product.id);
+    if (result === null) router.push("/login?redirect=/wishlist");
+  }
 
   function handleQuickView(e: React.MouseEvent) {
     e.preventDefault();
@@ -38,8 +54,27 @@ export function ProductCard({ product }: { product: ProductCardData }) {
             whileHover={{ scale: 1.04 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
           >
-            تصویر محصول
+            {product.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={product.imageUrl} alt={product.title} className="w-full h-full object-cover" />
+            ) : (
+              "تصویر محصول"
+            )}
           </motion.div>
+
+          {product.id && (
+            <button
+              onClick={handleWishlist}
+              aria-label={inWishlist ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"}
+              className="absolute top-3 left-3 z-10 w-9 h-9 bg-cream/90 flex items-center justify-center text-ink-muted hover:text-rosewood-dark transition-colors"
+            >
+              <Heart
+                size={17}
+                strokeWidth={1.5}
+                className={cn(inWishlist && "fill-rosewood-dark text-rosewood-dark")}
+              />
+            </button>
+          )}
 
           {hasDiscount && (
             <span className="absolute top-3 right-3 bg-sage text-cream text-small px-2 py-1">

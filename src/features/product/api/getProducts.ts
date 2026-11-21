@@ -20,3 +20,12 @@ export async function getFeaturedProducts(pageSize = 4): Promise<ProductCardData
   );
   return data.items.map(toCardData);
 }
+
+// محصولات یک دسته (با شناسه‌ی دسته)
+export async function getProductsByCategory(categoryId: number, pageSize = 100): Promise<ProductCardData[]> {
+  const { data } = await apiClient.get<ApiPagedResult<ApiProductListItem>>(
+    ENDPOINTS.productsByCategory(categoryId),
+    { params: { pageNumber: 1, pageSize } }
+  );
+  return data.items.map(toCardData);
+}

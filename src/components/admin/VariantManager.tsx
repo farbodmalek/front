@@ -9,6 +9,10 @@ export interface VariantRow {
   size: string;
   color: string;
   stock: string;
+  // فقط برای واریانت‌هایی که از قبل روی سرور هستند (شناسه‌ی ثابت برای ویرایش)
+  sku?: string;
+  // ویژگی‌های دیگری (غیر از سایز و رنگ) که باید هنگام ذخیره حفظ شوند
+  extra?: Record<string, string>;
 }
 
 interface VariantManagerProps {

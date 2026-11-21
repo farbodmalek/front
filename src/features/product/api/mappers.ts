@@ -5,8 +5,10 @@ import { ApiProductDetail, ApiProductListItem } from "./types";
 // بک‌اند → کارت محصول
 export function toCardData(p: ApiProductListItem): ProductCardData {
   return {
+    id: p.id,
     slug: p.slug,
     title: p.name,
+    imageUrl: p.primaryImageUrl ?? undefined,
     categoryName: p.categoryName,
     basePrice: p.basePrice,
     discountPrice: p.discountPrice ?? undefined,

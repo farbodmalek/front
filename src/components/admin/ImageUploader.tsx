@@ -7,8 +7,11 @@ import { cn } from "@/lib/utils/cn";
 
 export interface UploadedImage {
   id: string;
-  file: File;
+  // عکس تازه‌انتخاب‌شده (هنوز آپلود نشده)
+  file?: File;
   previewUrl: string;
+  // عکسی که از قبل روی سرور هست
+  url?: string;
 }
 
 interface ImageUploaderProps {

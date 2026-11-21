@@ -7,8 +7,8 @@ import { Footer } from "@/components/layout/Footer";
 import {
   ProductFilters,
   useProductFiltersState,
-  categoryOptions,
 } from "@/features/product/components/ProductFilters";
+import { getCategories } from "@/features/category/api";
 import { getProducts } from "@/features/product/api";
 import { getShopErrorMessage } from "@/lib/api/errors";
 import { SortDropdown } from "@/features/product/components/SortDropdown";
@@ -18,11 +18,6 @@ import {
 } from "@/features/product/components/ProductCard";
 
 type ListProduct = ProductCardData & { category: string };
-
-// اسم دسته‌ی بک‌اند را به slug فیلترها تبدیل می‌کند (اگر در لیست نبود، خود اسم)
-function categoryKey(name: string): string {
-  return categoryOptions.find((o) => o.label === name)?.value ?? name;
-}
 
 export default function ProductsPage() {
   const {
@@ -34,7 +29,14 @@ export default function ProductsPage() {
     setPriceRange,
   } = useProductFiltersState();
 
+  const [categoryOptions, setCategoryOptions] = useState<{ label: string; value: string }[]>([]);
   const [allProducts, setAllProducts] = useState<ListProduct[]>([]);
+
+  useEffect(() => {
+    getCategories()
+      .then((cats) => setCategoryOptions(cats.map((c) => ({ label: c.name, value: c.name }))))
+      .catch(() => setCategoryOptions([]));
+  }, []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,7 +45,7 @@ export default function ProductsPage() {
     getProducts()
       .then((items) => {
         if (!cancelled) {
-          setAllProducts(items.map((p) => ({ ...p, category: categoryKey(p.categoryName) })));
+          setAllProducts(items.map((p) => ({ ...p, category: p.categoryName })));
         }
       })
       .catch((e) => {
@@ -112,6 +114,7 @@ export default function ProductsPage() {
           {/* فیلتر دسکتاپ */}
           <div className="hidden md:block">
             <ProductFilters
+              categories={categoryOptions}
               selectedCategories={selectedCategories}
               onCategoryChange={toggleCategory}
               selectedSizes={selectedSizes}
@@ -161,6 +164,7 @@ export default function ProductsPage() {
               </button>
             </div>
             <ProductFilters
+              categories={categoryOptions}
               selectedCategories={selectedCategories}
               onCategoryChange={toggleCategory}
               selectedSizes={selectedSizes}

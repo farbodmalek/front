@@ -1,30 +1,14 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Package } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
-import { formatPrice } from "@/lib/utils/format";
+import { formatDate, formatPrice } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
-
-type OrderStatus = "processing" | "shipped" | "delivered" | "cancelled";
-
-interface Order {
-  id: string;
-  date: string;
-  itemsCount: number;
-  total: number;
-  status: OrderStatus;
-  thumbnails: number;
-}
-
-const mockOrders: Order[] = [
-  { id: "AV-482913", date: "۱۴۰۴/۰۶/۱۰", itemsCount: 3, total: 2450000, status: "delivered", thumbnails: 3 },
-  { id: "AV-482744", date: "۱۴۰۴/۰۶/۰۲", itemsCount: 1, total: 640000, status: "shipped", thumbnails: 1 },
-  { id: "AV-481920", date: "۱۴۰۴/۰۵/۲۲", itemsCount: 2, total: 1120000, status: "processing", thumbnails: 2 },
-  { id: "AV-479311", date: "۱۴۰۴/۰۴/۳۰", itemsCount: 1, total: 150000, status: "cancelled", thumbnails: 1 },
-];
+import { getMyOrders, OrderListItem, OrderStatus } from "@/features/order/api";
+import { getShopErrorMessage } from "@/lib/api/errors";
 
 const filterTabs: { id: OrderStatus | "all"; label: string }[] = [
   { id: "all", label: "همه" },
@@ -35,17 +19,24 @@ const filterTabs: { id: OrderStatus | "all"; label: string }[] = [
 ];
 
 export default function OrdersPage() {
+  const [orders, setOrders] = useState<OrderListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<OrderStatus | "all">("all");
 
+  useEffect(() => {
+    getMyOrders()
+      .then(setOrders)
+      .catch((e) => setError(getShopErrorMessage(e)))
+      .finally(() => setLoading(false));
+  }, []);
+
   const filteredOrders = useMemo(
-    () =>
-      activeFilter === "all"
-        ? mockOrders
-        : mockOrders.filter((o) => o.status === activeFilter),
-    [activeFilter]
+    () => (activeFilter === "all" ? orders : orders.filter((o) => o.status === activeFilter)),
+    [orders, activeFilter]
   );
 
-  const totalSpent = mockOrders
+  const totalSpent = orders
     .filter((o) => o.status !== "cancelled")
     .reduce((sum, o) => sum + o.total, 0);
 
@@ -53,11 +44,10 @@ export default function OrdersPage() {
     <div>
       <h1 className="text-h1 font-light text-ink mb-8">سفارش‌های من</h1>
 
-      {/* آمار سریع */}
       <div className="grid grid-cols-2 gap-4 mb-10">
         <div className="border border-line px-6 py-5">
           <p className="text-small text-ink-muted mb-2">تعداد سفارش‌ها</p>
-          <p className="text-h1 font-light text-ink">{mockOrders.length}</p>
+          <p className="text-h1 font-light text-ink">{orders.length.toLocaleString("fa-IR")}</p>
         </div>
         <div className="border border-line px-6 py-5">
           <p className="text-small text-ink-muted mb-2">مجموع خرید</p>
@@ -65,7 +55,6 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      {/* فیلتر وضعیت */}
       <div className="flex flex-wrap gap-2 mb-8">
         {filterTabs.map((tab) => (
           <button
@@ -83,7 +72,11 @@ export default function OrdersPage() {
         ))}
       </div>
 
-      {filteredOrders.length === 0 ? (
+      {loading ? (
+        <p className="text-body text-ink-muted">در حال بارگذاری سفارش‌ها...</p>
+      ) : error ? (
+        <p className="text-body text-rosewood-dark">{error}</p>
+      ) : filteredOrders.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center border border-dashed border-line">
           <Package size={32} strokeWidth={1.2} className="text-ink-muted mb-4" />
           <p className="text-body text-ink-muted">سفارشی با این وضعیت پیدا نشد.</p>
@@ -93,7 +86,7 @@ export default function OrdersPage() {
           <AnimatePresence mode="popLayout">
             {filteredOrders.map((order, index) => (
               <motion.div
-                key={order.id}
+                key={order.orderNumber}
                 layout
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -102,27 +95,17 @@ export default function OrdersPage() {
                 whileHover={{ y: -3 }}
               >
                 <Link
-                  href={`/orders/${order.id}`}
+                  href={`/orders/${order.orderNumber}`}
                   className="flex items-center justify-between gap-4 border border-line px-6 py-5 bg-surface shadow-sm hover:shadow-lg hover:border-ink/70 transition-all group"
                 >
                   <div className="flex items-center gap-5">
-                    {/* پشته تصاویر مینیاتوری */}
-                    <div className="hidden sm:flex -space-x-3 space-x-reverse flex-shrink-0">
-                      {Array.from({ length: order.thumbnails }).map((_, i) => (
-                        <div
-                          key={i}
-                          className="w-12 h-12 bg-line/50 border-2 border-surface flex items-center justify-center"
-                          style={{ zIndex: order.thumbnails - i }}
-                        >
-                          <span className="text-[10px] text-ink-muted">تصویر</span>
-                        </div>
-                      ))}
+                    <div className="hidden sm:flex w-12 h-12 bg-line/50 items-center justify-center flex-shrink-0">
+                      <Package size={20} strokeWidth={1.3} className="text-ink-muted" />
                     </div>
-
                     <div>
-                      <p className="text-body text-ink">{order.id}</p>
+                      <p className="text-body text-ink">{order.orderNumber}</p>
                       <p className="text-small text-ink-muted mt-1">
-                        {order.date} · {order.itemsCount} کالا
+                        {formatDate(order.createdAt)} · {order.itemsCount.toLocaleString("fa-IR")} کالا
                       </p>
                     </div>
                   </div>
