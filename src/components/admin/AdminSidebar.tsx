@@ -21,7 +21,7 @@ export function AdminSidebar() {
         <Link href="/admin" className="text-xl font-light tracking-tightish text-ink">
           پنل مدیریت
         </Link>
-        <p className="text-small text-ink-muted mt-1">آوای پوشاک</p>
+        <p className="text-small text-ink-muted mt-1">sarel</p>
       </div>
 
       <nav className="flex flex-col gap-1 p-4 flex-1">

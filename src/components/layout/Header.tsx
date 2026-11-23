@@ -29,7 +29,7 @@ export function Header() {
       <div className="mx-auto max-w-6xl px-6">
         <div className="flex items-center justify-between h-20">
           <Link href="/" className="text-2xl font-light tracking-tightish text-ink">
-            آوای پوشاک
+            sarel
           </Link>
 
           <nav className="hidden md:flex items-center gap-8">

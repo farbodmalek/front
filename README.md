@@ -1,4 +1,4 @@
-# آوای پوشاک — فرانت‌اند (Next.js 14)
+# sarel — فرانت‌اند (Next.js 14)
 
 فروشگاه آنلاین پوشاک دخترانه/زنانه با Next.js (App Router) + TypeScript + Tailwind + Framer Motion + Zustand.
 **ورود و ثبت‌نام به سرویس جدا و مستقل `GirlyShop.AuthService` وصل شده است.**

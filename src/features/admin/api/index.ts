@@ -143,6 +143,9 @@ export async function deleteProduct(id: string): Promise<void> {
 export async function uploadImage(file: File): Promise<string> {
   const form = new FormData();
   form.append("file", file);
-  const { data } = await apiClient.post<{ url: string }>(ENDPOINTS.admin.uploads, form);
+  // هدر JSON پیش‌فرض را باید برای آپلود کنار بگذاریم، وگرنه axios فایل را به JSON تبدیل می‌کند (ارور 415)
+  const { data } = await apiClient.post<{ url: string }>(ENDPOINTS.admin.uploads, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
   return data.url;
 }

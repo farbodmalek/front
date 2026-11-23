@@ -30,7 +30,7 @@ export function Footer() {
 
       <div className="mx-auto max-w-6xl px-6 py-16 grid grid-cols-1 md:grid-cols-3 gap-12">
         <div>
-          <h3 className="text-h2 font-light text-ink mb-3">آوای پوشاک</h3>
+          <h3 className="text-h2 font-light text-ink mb-3">sarel</h3>
           <p className="text-body text-ink-muted leading-7">
             پوشاکی برای هر روز و هر مناسبت؛ از جوراب تا لباس مجلسی، با دقت
             انتخاب شده برای شما.
@@ -55,7 +55,7 @@ export function Footer() {
 
       <div className="border-t border-line">
         <p className="text-small text-ink-muted text-center py-6">
-          تمام حقوق محفوظ است © آوای پوشاک
+          تمام حقوق محفوظ است © sarel
         </p>
       </div>
     </footer>

@@ -74,7 +74,7 @@ export default function AuthLayout({
             یک استایل تازه
           </h2>
           <p className="text-body text-cream/60 leading-8 mb-10">
-            عضو خانواده «آوای پوشاک» شو و به کالکشن‌های اختصاصی، تخفیف‌های
+            عضو خانواده «sarel» شو و به کالکشن‌های اختصاصی، تخفیف‌های
             زودهنگام و پیشنهادهای شخصی‌سازی‌شده دسترسی داشته باش.
           </p>
 
@@ -96,7 +96,7 @@ export default function AuthLayout({
       <div className="flex flex-col relative">
         <header className="px-8 md:px-16 py-8 relative z-20">
           <Link href="/" className="text-2xl font-light tracking-tightish text-ink">
-            آوای پوشاک
+            sarel
           </Link>
         </header>
 
