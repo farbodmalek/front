@@ -92,6 +92,7 @@ export default function AddressesPage() {
   async function handleMakeDefault(addr: Address) {
     setError(null);
     try {
+      
       setAddresses(
         await updateAddress(addr.id, {
           title: addr.title,
